@@ -4,9 +4,15 @@ import mysql.connector
 from flask import Flask, request, jsonify 
 from flask_cors import CORS
 import pdfplumber 
+
+
 app = Flask(__name__) 
+
 CORS(app) 
+
 PDF_DIR = "./pdfs" 
+
+
 # MySQL DB config (update these values as needed) 
 DB_CONFIG = { "host": "localhost",
  "user": "root", # ← change this
@@ -23,8 +29,6 @@ def normalize_text(text):
     return text 
  
 def extract_product_names_from_pdf(pdf_path):
-    import re
-    import pdfplumber
 
     try:
         with pdfplumber.open(pdf_path) as pdf:
@@ -141,7 +145,8 @@ def init_db():
         CREATE TABLE IF NOT EXISTS products (
             id INT AUTO_INCREMENT PRIMARY KEY,
             productname VARCHAR(255) NOT NULL UNIQUE,
-            filename VARCHAR(255) NOT NULL
+            filename VARCHAR(255) NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
     """)
     conn.commit()
@@ -150,9 +155,10 @@ def init_db():
 
 def insert_product(productname, filename):
     try:
+        normalized = normalize_text(clean_product_name(productname))
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
-        cursor.execute("INSERT IGNORE INTO products (productname, filename) VALUES (%s, %s)", (productname, filename))
+        cursor.execute("INSERT IGNORE INTO products (productname, filename) VALUES (%s, %s)", (normalized, filename))
         conn.commit()
         cursor.close()
         conn.close()
